@@ -228,7 +228,7 @@ def macro_record():
 
 def connectSwitchChange():
     if (connectSwitch.get() =="on"):
-        detectPort()
+        updatePorts()
     switchChange()
 
 def switchChange():
