@@ -129,7 +129,7 @@ def updatePorts():
 
 def detectPort(ports):
     for port, desc, hwid in sorted(ports):
-        if ("USB-SERIAL CH340" in desc):
+        if ("USB-SERIAL CH340" in desc or "USB Serial" in desc):
             print("Auto Detect:")
             print(port)
             portSelect.set(port)
