@@ -88,7 +88,7 @@ app.title("Macro Keyboard Configure")
 
 
 ##################################
-#   Constantly refresh ports        #will chnage selection if current port no longer available as well as auto detect if no current port is currently selected
+#   Constantly refresh ports        #will change selection if current port no longer available as well as auto detect if no current port is currently selected
 ##################################
 def updatePorts():
     global ser
@@ -112,7 +112,7 @@ def updatePorts():
             detectPort(ports)
 
     if (ser.isOpen() == False or prevPort != portSelect.get()):  #OR USER CHANGED BAUD RATE
-        ser.close() #close current port beofre trying new one
+        ser.close() #close current port before trying new one
         prevPort = portSelect.get()
         try:
             #check to see if already open first?????
@@ -282,7 +282,7 @@ def runMacros():
             ########################
             # decode and send keys #
             ########################
-            if (val != b''): #if responce not empty then try decode
+            if (val != b''): #if response not empty then try decode
                 try:  #try decode received value
                     receive = val.decode("utf-8")
                     print(receive)
@@ -413,9 +413,9 @@ def imgSender(file_path, image, border, colors):
     ##############################
     #       image cropping       #
     ##############################
-    crop_height = 0 #height that image sarts at is tller than 70 px (to center it)
+    crop_height = 0 #height that image starts at is taller than 70 px (to center it)
     start_height = 0 #where the image starts if less than 70px (to center it)
-    max_height = 70 #if the imaage less than 70px stop at end of image
+    max_height = 70 #if the image less than 70px stop at end of image
     if (height > 70): #if image larger than 70 high after resize then centre it
         crop_height = int((height-70)/2)
     elif (height < 70):
@@ -656,7 +656,7 @@ butNumLabel.configure(font=("Arial", 10))
 #          Threading (actually running everything)
 ###################################
 
-#Using threading to display GUI and send macros at same time (May be use a fair amout of memory on a slow computer)
+#Using threading to display GUI and send macros at same time (May be use a fair amount of memory on a slow computer)
 def threading():
     # Call work function
     t1=Thread(target=work)
