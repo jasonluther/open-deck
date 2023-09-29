@@ -361,9 +361,9 @@ lastWindow = ""
 
 def sendWindow():  # sends current window to opendeck on window change
     global lastWindow
-    if (gw.getActiveWindow().title != lastWindow):  # if window changed
+    if (gw.getActiveWindow().title() != lastWindow):  # if window changed
         # print("window changed")
-        lastWindow = gw.getActiveWindow().title
+        lastWindow = gw.getActiveWindow().title()
         for item in app_dict:
             appName = app_dict[item]
             if (appName != ""):  # loop through all app names
