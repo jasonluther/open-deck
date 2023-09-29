@@ -8,6 +8,7 @@ import customtkinter
 import serial
 import serial.tools.list_ports
 import math
+import sys
 
 import keyboard
 import time
@@ -342,15 +343,19 @@ def runMacros():
 #######################################
  # bring window to front first (windows only)
 def bringWindowFront(num):  # could be an issue if multiple instances are open and it uses background one instead of active one (could scan all to see if one is already open)
-    title = app_dict[num]
-    if (title != ""):
-        if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
-            # print(len(gw.getWindowsWithTitle(title)))
-            window = gw.getWindowsWithTitle(title)[0]
-            if (window.isMinimized):
-                window.restore()  # if minimized then open
-            else:
-                window.activate()  # if already open bring to front
+    if sys.platform in ['Windows', 'win32', 'cygwin']:
+        title = app_dict[num]
+        if (title != ""):
+            if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
+                # print(len(gw.getWindowsWithTitle(title)))
+                window = gw.getWindowsWithTitle(title)[0]
+                if (window.isMinimized):
+                    window.restore()  # if minimized then open
+                else:
+                    window.activate()  # if already open bring to front
+    elif sys.platform in ['Mac', 'darwin', 'os2', 'os2emx']:
+        # To Do: https://stackoverflow.com/questions/10266281/obtain-active-window-using-python
+        pass
 
 
 #####################################
@@ -363,7 +368,7 @@ def sendWindow():  # sends current window to opendeck on window change
     global lastWindow
     activeWindow = gw.getActiveWindow().title()
     if (activeWindow != lastWindow):  # if window changed
-        # print("window changed")
+        print(f"window changed to {activeWindow}")
         lastWindow = activeWindow
         for item in app_dict:
             appName = app_dict[item]
