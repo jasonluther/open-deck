@@ -17,9 +17,6 @@ import sys
 import time
 import tkinter
 
-# import matplotlib.pyplot as plt
-
-# open a pickle file
 filename = 'data.pk'  # pickle file to save the data
 
 ser = serial.Serial()
@@ -143,7 +140,6 @@ except:
 
 def pickleData():
     with open(filename, 'wb') as fi:
-        # dump your data into the file
         pickle.dump([key_dict, app_dict, switchStates], fi)
 
 ##################################
