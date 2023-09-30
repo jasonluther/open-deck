@@ -23,8 +23,6 @@ ser = serial.Serial()
 
 COMports = []
 
-val = b''
-
 prevPort = "Select"
 
 # Defaults, New values are stored in data.pk
@@ -291,41 +289,47 @@ def runMacros():
         # Read from serial #
         ###################
         try:
-            val = ser.readline()
-            # print(val)
-
-            ########################
-            # decode and send keys #
-            ########################
-            if (val != b''):  # if response not empty then try decode
-                try:  # try decode received value
-                    receive = val.decode("utf-8").strip()
-                    print(receive)
-                    if (len(receive) > 6):
-                        if (receive[0:6] == "Menu: " and switch_1.get() == "on"):
-                            try:
-                                bringWindowFront(int(receive[6:]))
-                            except:
-                                print("Failed to bring window to front")
-                    elif (int(receive) > 0 and int(receive) <= 18):
-                        receive = int(receive)
-                        # Set window to app button was for
-                        appNum = math.ceil(receive/3)
-                        if (app_dict[appNum] != "" and switch_2.get() == "on"):
-                            try:
-                                bringWindowFront(appNum)
-                            except:
-                                print("Failed to bring window to front")
-                        print(key_dict[receive][1])
-                        # loop through commands in list (or single command)
-                        for command in key_dict[receive][0]:
-                            keyboard.press_and_release(command)
-                            time.sleep(0.1)
-                except:  # error decoding result
-                    print("Error Decoding Line")
-                    ser.close()  # try restart serial port
-        except:  # error reading from buffer so close serial to try and re-connect
-            print("error reading line")
+            serialInput = ser.readline().decode().strip()
+            if (len(serialInput) > 1):
+                print(f'Serial message: "{serialInput}"')
+            if (serialInput == ''):
+                pass
+            elif (len(serialInput) > 2):
+                if (serialInput[0:6] == "Menu: "):
+                    try:
+                        number = int(serialInput[6:])
+                    except Exception as error:
+                        print(f"Couldn't decode number {number}: ", error)
+                    if (switch_1.get() == "on"):
+                        try:
+                            bringWindowFront(number)
+                        except Exception as error:
+                            print("Failed to bring window to front:", error)
+            else:
+                try:
+                    number = int(serialInput)
+                except Exception as error:
+                    print(f"Couldn't decode number {number}:", error)
+                # Set window to app button was for
+                appNum = math.ceil(number/3)
+                if (app_dict[appNum] != "" and switch_2.get() == "on"):
+                    try:
+                        bringWindowFront(appNum)
+                    except Exception as error:
+                        print("Failed to bring window to front:", error)
+                # Run the macros
+                print(key_dict[number][1])
+                for command in key_dict[number][0]:
+                    try:
+                        keyboard.press_and_release(command)
+                        time.sleep(0.1)
+                    except IndexError as error:
+                        print(
+                            f"Unsupported key in command `{command}`:", error)
+                    except Exception as error:
+                        print("Failed to run command:", error)
+        except Exception as error:  # error reading from buffer so close serial to try and re-connect
+            print("Error reading line:", error)
             ser.close()
 
 
@@ -496,10 +500,10 @@ def imgSender(file_path, image, border, colors):
         # ser = serial.Serial(portSelect.get(), baudSelect.get())
         time.sleep(0.5)
         ser.write(image)
-        val = ser.readline()
+        serialInput = ser.readline().decode().strip()
 
         print("")
-        print(val)
+        print(serialInput)
 
         packet = bytearray()
         packet = outputArray
