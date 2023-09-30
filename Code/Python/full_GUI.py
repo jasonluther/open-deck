@@ -84,10 +84,12 @@ app.geometry("800x900")
 app.title("Macro Keyboard Configure")
 
 
-##################################
-#   Constantly refresh ports        #will change selection if current port no longer available as well as auto detect if no current port is currently selected
-##################################
 def updatePorts():
+    """
+    Constantly refresh ports
+    Will change selection if current port no longer available as well as auto 
+    detect if no current port is currently selected
+    """
     global ser
     global COMports
     global prevPort
@@ -147,10 +149,11 @@ def pickleData():
 #     GUI callbacks
 ##################################
 
-# macro update button
-
 
 def macro_update():
+    """
+    Handle Macro Setup "Update" button
+    """
     buttonNum = int(macroCombobox.get()[5:])
     key_dict[buttonNum][1] = nameEntry.get()
     entry = macroEntry.get()
@@ -165,19 +168,21 @@ def macro_update():
     logging.debug(f"Button click: {macroCombobox.get()}")
     pickleData()
 
-# app name update function
-
 
 def app_update():
+    """
+    Handle Application Setup "App Name" update
+    """
     appNum = int(appCombobox.get()[4:])
     app_dict[appNum] = appEntry.get()  # update app name in dict
     logging.debug(f"Button click: {appCombobox.get()}")
     pickleData()
 
-# button dropdown changed
-
 
 def macroCombobox_callback(choice):
+    """
+    Handle Macro Setup "Button Number" dropdown change
+    """
     logging.debug(f"combobox dropdown clicked: {choice}")
     num = int(choice[5:])
     logging.debug(f"combobox dropdown num: {num}")
@@ -201,6 +206,9 @@ def macroCombobox_callback(choice):
 
 
 def appCombobox_Callback(choice):
+    """
+    Handle Application Setup "App Number" dropdown change
+    """
     logging.debug(f"combobox dropdown clicked: {choice}")
     num = int(choice[4:])
     logging.debug(f"combobox dropdown num: {num}")
@@ -209,10 +217,11 @@ def appCombobox_Callback(choice):
     appEntry.delete(0, 'end')
     appEntry.insert(0, app_dict[num])
 
-# function to record key presses
-
 
 def macro_record():
+    """
+    Handle Macro Setup "Record Keys" button
+    """
     logging.info("Recording Keys")  # change button colour while recording
     recButton.configure(state=tkinter.DISABLED)
     keyboard.start_recording()
@@ -269,18 +278,13 @@ def upload_button_callback():
             imgSender(file_path, withS, 1, colors)
 
 
-##################################
-#   main function to detect all key presses and window switching
-##################################
 def runMacros():
-    # global ser
-    ##########################
+    """
+    Detect all button presses and window switching
+    """
     # Connect to serial port #  (add gui and auto detect)
-    ##########################
     if (ser.isOpen()):
-        ################################
-        # send current app over serial #
-        ################################
+        # send current app over serial
         if (switch_3.get() == "on"):
             try:
                 sendWindow()  # function to send active window num to opendeck
@@ -288,9 +292,7 @@ def runMacros():
                 # can fail for many reasons: active window , serial.write fails
                 logging.warning("Send Application Failed")
 
-        ###################
-        # Read from serial #
-        ###################
+        # Read from serial port and handle events
         try:
             serialInput = ser.readline().decode().strip()
             if (len(serialInput) > 1):
@@ -318,11 +320,17 @@ def runMacros():
 
 
 def handleSerialCommandMenuNumber(number):
+    """
+    Handle "Menu: X" events, where X is the app number
+    """
     if (switch_1.get() == "on"):
         bringWindowFront(number)
 
 
 def handleSerialCommandNumber(number):
+    """
+    Handle number events, where the number represents the macro button
+    """
     # Set window to app button was for
     appNum = math.ceil(number/3)
     if (app_dict[appNum] != "" and switch_2.get() == "on"):
@@ -341,14 +349,15 @@ def handleSerialCommandNumber(number):
         except Exception as error:
             logging.error(f"Failed to run command `{command}`: {error}")
 
-#######################################
-#    make chosen app/window active    #
-#######################################
- # bring window to front first (windows only)
 
-
-def bringWindowFront(num):  # could be an issue if multiple instances are open and it uses background one instead of active one (could scan all to see if one is already open)
+def bringWindowFront(num):
+    """
+    Make chosen app/window active, where num represents the app number
+    """
     if sys.platform in ['Windows', 'win32', 'cygwin']:
+        # could be an issue if multiple instances are open and it uses
+        # background one instead of active one (could scan all to see if one
+        # is already open)
         title = app_dict[num]
         if (title != ""):
             try:
@@ -367,13 +376,13 @@ def bringWindowFront(num):  # could be an issue if multiple instances are open a
         return False
 
 
-#####################################
-#    Send active window to deck     #
-#####################################
 lastWindow = ""
 
 
-def sendWindow():  # sends current window to opendeck on window change
+def sendWindow():
+    """
+    Send active window to deck
+    """
     global lastWindow
     activeWindow = gw.getActiveWindow().title()
     if (activeWindow != lastWindow):  # if window changed
@@ -392,10 +401,10 @@ def sendWindow():  # sends current window to opendeck on window change
                     break
 
 
-##############################
-#        File selector       #
-##############################
 def imgPicker():
+    """
+    Image upload file selector
+    """
     root = tkinter.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename()
@@ -406,24 +415,20 @@ def imgPicker():
     return (file_path, colors)
 
 
-##############################
-#         Send Images        #
-##############################
 def imgSender(file_path, image, border, colors):
+    """
+    Given an image, convert to deck format and send data over the serial port
+    """
     global ser
     logging.debug(f"imgSender: {image}")
 
-    #################################
-    # convert colours to byte array #
-    #################################
+    # Convert colours to byte array
     colour = bytearray()
     colour = [colors[0][0], colors[0][1], colors[0][2]]  # colour in RGB
 
     img = cv2.imread(file_path, 0)
 
-    #####################################
-    #    Resize image to correct width   #
-    #####################################
+    # Resize image to correct width
     height, width = img.shape
     logging.debug(f"imgSender: {width} x {height}")
 
@@ -435,11 +440,8 @@ def imgSender(file_path, image, border, colors):
 
     height, width = img.shape
 
-    ###############################
-    # add empty border to make image smaller
-    # (smaller image used to show selection)
-    ###############################
-    if (border):  # if board is to be added (for making image smaller)
+    # add empty border to make a smaller image, used to indicate when button is pressed
+    if (border):
         img = cv2.copyMakeBorder(src=img, top=10, bottom=10, left=10,
                                  right=10, borderType=cv2.BORDER_CONSTANT, value=[255, 255, 255])
         height, width = img.shape
@@ -452,9 +454,7 @@ def imgSender(file_path, image, border, colors):
     height, width = img.shape
     logging.debug(f"imgSender: {width} x {height}")
 
-    ##############################
-    #       image cropping       #
-    ##############################
+    # crop the image
     # height that image starts at is taller than 70 px (to center it)
     crop_height = 0
     start_height = 0  # where the image starts if less than 70px (to center it)
@@ -473,9 +473,7 @@ def imgSender(file_path, image, border, colors):
     mono_img = np.zeros((70, mono_img_width))
     logging.debug(f"imgSender: {mono_img}")
 
-    #############
     # convert numpy array into 0 and 1 (mono colour) (puts image into centre of height as well)
-    #############
     for y in range(0, max_height):
         for x in range(0, 54):
             # if compare pixel to threshold (make selectable in future with slider)
@@ -517,17 +515,13 @@ def imgSender(file_path, image, border, colors):
         ser.write(colour)
         # time.sleep(0.5)
 
-    ########################
-    # Visualize the result #
-    ########################
+    # Visualize the result
     # plt.imshow(mono_img, cmap='gray')
     # plt.xlim(0,54)
     # plt.show()
 
 
-##################################
-#       GUI setup
-##################################
+# GUI setup
 app.grid_rowconfigure(0, weight=1, minsize=200)
 app.grid_columnconfigure(0, weight=1, minsize=200)
 
@@ -539,9 +533,7 @@ for port, desc, hwid in sorted(ports):
     # COMports.append(port)
 
 
-##############################
-#   Connections settings                #Add turn auto detect on/off #add turn on/off and connection status
-#############################
+#   Connections settings #Add turn auto detect on/off #add turn on/off and connection status
 frame_1 = customtkinter.CTkFrame(master=app)
 frame_1.pack(pady=(20, 20), padx=60, fill="both", expand=False)
 
@@ -586,9 +578,8 @@ if (connectSwitch.get() == "on"):
     detectPort(ports)
 
 
-#########################################
-#         Image Upload
-#########################################
+
+# Image Upload
 frame_4 = customtkinter.CTkFrame(master=app)
 frame_4.pack(pady=(0, 20), padx=60, fill="both", expand=False)
 
@@ -609,9 +600,7 @@ button_1 = customtkinter.CTkButton(
     master=frame_4, command=upload_button_callback, text="Select & Upload")
 button_1.grid(row=2, column=0, columnspan=2, padx=200, pady=10, sticky="ew")
 
-##############################
-#   Macro Setup                         #add record keystrokes!!!!!!!!!!
-#############################
+# Macro Setup                         #add record keystrokes!!!!!!!!!!
 frame_2 = customtkinter.CTkFrame(master=app)
 frame_2.pack(pady=(0, 20), padx=60, fill="both", expand=False)
 
@@ -661,9 +650,7 @@ button_1 = customtkinter.CTkButton(
     master=frame_2, command=macro_update, text="Update")
 button_1.grid(row=5, column=3, columnspan=1, padx=20, pady=(0, 0), sticky="ew")
 
-##########################################
-#   App Setup and window Switching
-##########################################
+# App Setup and window Switching
 frame_3 = customtkinter.CTkFrame(master=app)
 frame_3.pack(pady=(0, 20), padx=60, fill="both", expand=True)
 
@@ -721,9 +708,8 @@ butNumLabel.grid(row=8, column=0, columnspan=1, padx=0, pady=0, sticky="nn")
 butNumLabel.configure(font=("Arial", 10))
 
 
-###################################
-#          Threading (actually running everything)
-###################################
+
+# Threading (actually running everything)
 
 # Using threading to display GUI and send macros at same time (May be use a fair amount of memory on a slow computer)
 def threading():
