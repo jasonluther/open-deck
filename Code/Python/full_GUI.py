@@ -308,7 +308,7 @@ def runMacros():
             ########################
             if (val != b''):  # if response not empty then try decode
                 try:  # try decode received value
-                    receive = val.decode("utf-8")
+                    receive = val.decode("utf-8").strip()
                     print(receive)
                     if (len(receive) > 6):
                         if (receive[0:6] == "Menu: " and switch_1.get() == "on"):
