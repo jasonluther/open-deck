@@ -300,38 +300,44 @@ def runMacros():
                         number = int(serialInput[6:])
                     except Exception as error:
                         print(f"Couldn't decode number {number}: ", error)
-                    if (switch_1.get() == "on"):
-                        try:
-                            bringWindowFront(number)
-                        except Exception as error:
-                            print("Failed to bring window to front:", error)
+                    handleSerialCommandMenuNumber(number)
             else:
                 try:
                     number = int(serialInput)
                 except Exception as error:
                     print(f"Couldn't decode number {number}:", error)
-                # Set window to app button was for
-                appNum = math.ceil(number/3)
-                if (app_dict[appNum] != "" and switch_2.get() == "on"):
-                    try:
-                        bringWindowFront(appNum)
-                    except Exception as error:
-                        print("Failed to bring window to front:", error)
-                # Run the macros
-                print(key_dict[number][1])
-                for command in key_dict[number][0]:
-                    try:
-                        keyboard.press_and_release(command)
-                        time.sleep(0.1)
-                    except IndexError as error:
-                        print(
-                            f"Unsupported key in command `{command}`:", error)
-                    except Exception as error:
-                        print("Failed to run command:", error)
+                handleSerialCommandNumber(number)
         except Exception as error:  # error reading from buffer so close serial to try and re-connect
             print("Error reading line:", error)
             ser.close()
 
+def handleSerialCommandMenuNumber(number):
+    if (switch_1.get() == "on"):
+        try:
+            bringWindowFront(number)
+        except Exception as error:
+            print("Failed to bring window to front:", error)
+
+def handleSerialCommandNumber(number):
+    # Set window to app button was for
+    appNum = math.ceil(number/3)
+    if (app_dict[appNum] != "" and switch_2.get() == "on"):
+        try:
+            bringWindowFront(appNum)
+        except Exception as error:
+            print("Failed to bring window to front:", error)
+    # Run the macros
+    print(key_dict[number][1])
+    for command in key_dict[number][0]:
+        try:
+            keyboard.press_and_release(command)
+            time.sleep(0.1)
+        except IndexError as error:
+            print(f"Unsupported key in command `{command}`:", error)
+        except ValueError as error:
+            print(f"Unrecognized hotkey in command `{command}`:", error)
+        except Exception as error:
+            print(f"Failed to run command `{command}`:", error)
 
 #######################################
 #    make chosen app/window active    #
