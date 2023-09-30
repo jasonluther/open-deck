@@ -7,6 +7,7 @@ from tkinter.colorchooser import askcolor
 import customtkinter
 import cv2
 import keyboard
+import logging
 import math
 import numpy as np
 import pickle
@@ -16,6 +17,8 @@ import serial.tools.list_ports
 import sys
 import time
 import tkinter
+
+logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 saveDataFilename = 'data.pk'  # pickle file to save the data
 
@@ -94,13 +97,13 @@ def updatePorts():
     for port, desc, hwid in sorted(ports):
         COMports.append(port+": "+desc)
     if (lastPorts != COMports):
-        print("Port change detected")
+        logging.info("Port change detected")
         lastPorts = COMports
         portSelect.configure(values=COMports)
         # portSelect.values=COMports  #not working use .configure instead
 
         if (portSelect.get() not in COMports):  # issue here???????
-            print("Old port no longer detected, un-selecting")
+            logging.debug("Old port no longer detected, un-selecting")
             portSelect.set("Select")
         if (portSelect.get() == "Select" and connectSwitch.get() == "on"):
             detectPort(ports)
@@ -121,8 +124,7 @@ def updatePorts():
 def detectPort(ports):
     for port, desc, hwid in sorted(ports):
         if ("USB-SERIAL CH340" in desc or "USB Serial" in desc):
-            print("Auto Detect:")
-            print(port)
+            logging.info(f"Auto-detect port: {port}")
             portSelect.set(port)
 
 
@@ -133,16 +135,18 @@ try:
     with open(saveDataFilename, 'rb') as fi:
         key_dict, app_dict, switchStates = pickle.load(fi)
 except:
-    print("Could not import prev data")
+    logging.warning("Could not import saved data from pickle file")
 
 
 def pickleData():
+    logging.debug("Saving data to pickle file")
     with open(saveDataFilename, 'wb') as fi:
         pickle.dump([key_dict, app_dict, switchStates], fi)
 
 ##################################
 #     GUI callbacks
 ##################################
+
 # macro update button
 
 
@@ -158,9 +162,8 @@ def macro_update():
         if (command != ""):
             finalCommands.append(command)
     key_dict[buttonNum][0] = finalCommands
-    print("Button click", macroCombobox.get())
-
-    pickleData()  # call function to pickle data
+    logging.debug(f"Button click: {macroCombobox.get()}")
+    pickleData()
 
 # app name update function
 
@@ -168,16 +171,16 @@ def macro_update():
 def app_update():
     appNum = int(appCombobox.get()[4:])
     app_dict[appNum] = appEntry.get()  # update app name in dict
-    print("Button click", appCombobox.get())
-    pickleData()  # call function to pickle data
+    logging.debug(f"Button click: {appCombobox.get()}")
+    pickleData()
 
 # button dropdown changed
 
 
 def macroCombobox_callback(choice):
-    print("combobox dropdown clicked:", choice)
+    logging.debug(f"combobox dropdown clicked: {choice}")
     num = int(choice[5:])
-    print(num)
+    logging.debug(f"combobox dropdown num: {num}")
     macroEntry.delete(0, 'end')
     if (len(key_dict[num][0]) > 1):
         count = 0
@@ -198,9 +201,9 @@ def macroCombobox_callback(choice):
 
 
 def appCombobox_Callback(choice):
-    print("combobox dropdown clicked:", choice)
+    logging.debug(f"combobox dropdown clicked: {choice}")
     num = int(choice[4:])
-
+    logging.debug(f"combobox dropdown num: {num}")
     butNumLabel.configure(
         text=("Buttons " + str(num*3-2) + ", " + str(num*3-1) + ", " + str(num*3)))
     appEntry.delete(0, 'end')
@@ -210,7 +213,7 @@ def appCombobox_Callback(choice):
 
 
 def macro_record():
-    print("Recording Keys")  # change button colour while recording
+    logging.info("Recording Keys")  # change button colour while recording
     recButton.configure(state=tkinter.DISABLED)
     keyboard.start_recording()
     time.sleep(5)
@@ -229,7 +232,7 @@ def macro_record():
     # combo.strip()
     # remove last comma and space (not sure how it removes all?)
     combo = combo[:len(combo)-1]
-    print(combo)
+    logging.debug(f"{combo}")
     recButton.configure(state=tkinter.NORMAL)
     macroEntry.delete(0, 'end')
     macroEntry.insert(0, combo)
@@ -250,7 +253,7 @@ def switchChange():
 
 
 def upload_button_callback():
-    # print("Upload here")
+    logging.debug("Upload here")
     file_path, colors = imgPicker()
 
     if (file_path != NONE and colors != NONE):
@@ -283,7 +286,7 @@ def runMacros():
                 sendWindow()  # function to send active window num to opendeck
             except:
                 # can fail for many reasons: active window , serial.write fails
-                print("Send Application Failed")
+                logging.warning("Send Application Failed")
 
         ###################
         # Read from serial #
@@ -291,7 +294,7 @@ def runMacros():
         try:
             serialInput = ser.readline().decode().strip()
             if (len(serialInput) > 1):
-                print(f'Serial message: "{serialInput}"')
+                logging.debug(f'Serial message: "{serialInput}"')
             if (serialInput == ''):
                 pass
             elif (len(serialInput) > 2):
@@ -299,51 +302,57 @@ def runMacros():
                     try:
                         number = int(serialInput[6:])
                     except Exception as error:
-                        print(f"Couldn't decode number {number}: ", error)
+                        logging.warning(
+                            f"Couldn't decode number {number}: {error}")
                     handleSerialCommandMenuNumber(number)
             else:
                 try:
                     number = int(serialInput)
                 except Exception as error:
-                    print(f"Couldn't decode number {number}:", error)
+                    logging.warning(
+                        f"Couldn't decode number {number}: {error}")
                 handleSerialCommandNumber(number)
         except Exception as error:  # error reading from buffer so close serial to try and re-connect
-            print("Error reading line:", error)
+            logging.error("Error reading line: {error}")
             ser.close()
+
 
 def handleSerialCommandMenuNumber(number):
     if (switch_1.get() == "on"):
         bringWindowFront(number)
 
+
 def handleSerialCommandNumber(number):
     # Set window to app button was for
     appNum = math.ceil(number/3)
     if (app_dict[appNum] != "" and switch_2.get() == "on"):
-            bringWindowFront(appNum)
+        bringWindowFront(appNum)
     # Run the macros
-    print(key_dict[number][1])
+    logging.info(f"Running macro {number}: {key_dict[number][1]}")
     for command in key_dict[number][0]:
         try:
             keyboard.press_and_release(command)
             time.sleep(0.1)
         except IndexError as error:
-            print(f"Unsupported key in command `{command}`:", error)
+            logging.warning(f"Unsupported key in command `{command}`: {error}")
         except ValueError as error:
-            print(f"Unrecognized hotkey in command `{command}`:", error)
+            logging.warning(
+                f"Unrecognized hotkey in command `{command}`: {error}")
         except Exception as error:
-            print(f"Failed to run command `{command}`:", error)
+            logging.error(f"Failed to run command `{command}`: {error}")
 
 #######################################
 #    make chosen app/window active    #
 #######################################
  # bring window to front first (windows only)
+
+
 def bringWindowFront(num):  # could be an issue if multiple instances are open and it uses background one instead of active one (could scan all to see if one is already open)
     if sys.platform in ['Windows', 'win32', 'cygwin']:
         title = app_dict[num]
         if (title != ""):
             try:
                 if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
-                    # print(len(gw.getWindowsWithTitle(title)))
                     window = gw.getWindowsWithTitle(title)[0]
                     if (window.isMinimized):
                         window.restore()  # if minimized then open
@@ -351,8 +360,8 @@ def bringWindowFront(num):  # could be an issue if multiple instances are open a
                         window.activate()  # if already open bring to front
                     return True
             except Exception as error:
-                print("Failed to bring window to front:", error)   
-                return False             
+                logging.warning("Failed to bring window to front: {error}")
+                return False
     elif sys.platform in ['Mac', 'darwin', 'os2', 'os2emx']:
         # To Do: https://stackoverflow.com/questions/10266281/obtain-active-window-using-python
         return False
@@ -368,14 +377,15 @@ def sendWindow():  # sends current window to opendeck on window change
     global lastWindow
     activeWindow = gw.getActiveWindow().title()
     if (activeWindow != lastWindow):  # if window changed
-        print(f"window changed to {activeWindow}")
+        logging.info(f"window changed to {activeWindow}")
         lastWindow = activeWindow
         for item in app_dict:
             appName = app_dict[item]
             if (appName != ""):  # loop through all app names
                 if appName.lower() in lastWindow.lower():  # if name of app in current window send menu num
                     # return menu number it was found on
-                    print("GoTo: " + str(item))
+                    logging.info(
+                        f"Sending serial command: `GoTo: {str(item)}`")
                     if (ser.isOpen()):
                         ser.write(("GoTo: " + str(item)).encode("utf-8"))
                         time.sleep(0.2)
@@ -389,10 +399,10 @@ def imgPicker():
     root = tkinter.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename()
-    print(file_path)
+    logging.debug(f"Image picker: opened `{file_path}`")
     if (file_path):
         colors = askcolor(title="Tkinter Color Chooser")
-        print(colors[0])
+        logging.debug(f"Image picker: color chosen: `{colors[0]}`")
     return (file_path, colors)
 
 
@@ -401,7 +411,7 @@ def imgPicker():
 ##############################
 def imgSender(file_path, image, border, colors):
     global ser
-    # print(image)
+    logging.debug(f"imgSender: {image}")
 
     #################################
     # convert colours to byte array #
@@ -412,11 +422,10 @@ def imgSender(file_path, image, border, colors):
     img = cv2.imread(file_path, 0)
 
     #####################################
-    #    Resize image to correct with   #
+    #    Resize image to correct width   #
     #####################################
     height, width = img.shape
-    # print(width)
-    # print(height)
+    logging.debug(f"imgSender: {width} x {height}")
 
     if (width != 54):
         scale_factor = 54/width
@@ -441,8 +450,7 @@ def imgSender(file_path, image, border, colors):
             img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
 
     height, width = img.shape
-    # print(width)
-    # print(height)
+    logging.debug(f"imgSender: {width} x {height}")
 
     ##############################
     #       image cropping       #
@@ -463,8 +471,7 @@ def imgSender(file_path, image, border, colors):
 
     mono_img_width = ((54//8+1)*8)
     mono_img = np.zeros((70, mono_img_width))
-
-    # print(mono_img)
+    logging.debug(f"imgSender: {mono_img}")
 
     #############
     # convert numpy array into 0 and 1 (mono colour) (puts image into centre of height as well)
@@ -480,7 +487,6 @@ def imgSender(file_path, image, border, colors):
     outputArray = []
     # convert into binary bmp format
     for y in range(0, 70):
-        # print("")
         for x in range(0, mono_img_width, 8):
             if (y < start_height or y > (start_height + height)):
                 binary = "00000000"  # make outside pixels empty
@@ -488,12 +494,9 @@ def imgSender(file_path, image, border, colors):
                 # turn 8 pixels into one hex number
                 binary = str(int(mono_img[y][x]))+str(int(mono_img[y][x+1]))+str(int(mono_img[y][x+2]))+str(int(mono_img[y][x+3]))+str(
                     int(mono_img[y][x+4]))+str(int(mono_img[y][x+5]))+str(int(mono_img[y][x+6]))+str(int(mono_img[y][x+7]))
-
             # Print in format stored in arduino
             print("0x{:02x},".format(int(binary, 2)), end=' ')
-
             outputArray.append(int(binary, 2))
-
         # Carriage return for correct arduino array formatting
         print("\r")
 
@@ -506,10 +509,7 @@ def imgSender(file_path, image, border, colors):
         time.sleep(0.5)
         ser.write(image)
         serialInput = ser.readline().decode().strip()
-
-        print("")
-        print(serialInput)
-
+        logging.debug(f'Serial message: "{serialInput}"')
         packet = bytearray()
         packet = outputArray
         ser.write(packet)
