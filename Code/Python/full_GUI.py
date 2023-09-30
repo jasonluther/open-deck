@@ -1,26 +1,21 @@
 from imaplib import Commands
+from threading import *
 from tkinter import *
-from tkinter import ttk
 from tkinter import filedialog
+from tkinter import ttk
 from tkinter.colorchooser import askcolor
-import tkinter
 import customtkinter
+import cv2
+import keyboard
+import math
+import numpy as np
+import pickle
+import pygetwindow as gw  # for window switching (windows only)
 import serial
 import serial.tools.list_ports
-import math
 import sys
-
-import keyboard
 import time
-
-import pickle
-
-import pygetwindow as gw  # for window switching (windows only)
-
-import numpy as np
-import cv2
-
-from threading import *
+import tkinter
 
 # import matplotlib.pyplot as plt
 
