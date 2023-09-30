@@ -313,19 +313,13 @@ def runMacros():
 
 def handleSerialCommandMenuNumber(number):
     if (switch_1.get() == "on"):
-        try:
-            bringWindowFront(number)
-        except Exception as error:
-            print("Failed to bring window to front:", error)
+        bringWindowFront(number)
 
 def handleSerialCommandNumber(number):
     # Set window to app button was for
     appNum = math.ceil(number/3)
     if (app_dict[appNum] != "" and switch_2.get() == "on"):
-        try:
             bringWindowFront(appNum)
-        except Exception as error:
-            print("Failed to bring window to front:", error)
     # Run the macros
     print(key_dict[number][1])
     for command in key_dict[number][0]:
@@ -347,16 +341,21 @@ def bringWindowFront(num):  # could be an issue if multiple instances are open a
     if sys.platform in ['Windows', 'win32', 'cygwin']:
         title = app_dict[num]
         if (title != ""):
-            if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
-                # print(len(gw.getWindowsWithTitle(title)))
-                window = gw.getWindowsWithTitle(title)[0]
-                if (window.isMinimized):
-                    window.restore()  # if minimized then open
-                else:
-                    window.activate()  # if already open bring to front
+            try:
+                if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
+                    # print(len(gw.getWindowsWithTitle(title)))
+                    window = gw.getWindowsWithTitle(title)[0]
+                    if (window.isMinimized):
+                        window.restore()  # if minimized then open
+                    else:
+                        window.activate()  # if already open bring to front
+                    return True
+            except Exception as error:
+                print("Failed to bring window to front:", error)   
+                return False             
     elif sys.platform in ['Mac', 'darwin', 'os2', 'os2emx']:
         # To Do: https://stackoverflow.com/questions/10266281/obtain-active-window-using-python
-        pass
+        return False
 
 
 #####################################
