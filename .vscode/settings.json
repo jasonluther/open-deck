@@ -5,6 +5,7 @@
         "colours",
         "columnspan",
         "customtkinter",
+        "favourite",
         "hwid",
         "imread",
         "imshow",
