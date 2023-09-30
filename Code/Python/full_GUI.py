@@ -17,7 +17,7 @@ import sys
 import time
 import tkinter
 
-filename = 'data.pk'  # pickle file to save the data
+saveDataFilename = 'data.pk'  # pickle file to save the data
 
 ser = serial.Serial()
 
@@ -132,14 +132,14 @@ def detectPort(ports):
 #       get data from pickle
 ##################################
 try:
-    with open(filename, 'rb') as fi:
+    with open(saveDataFilename, 'rb') as fi:
         key_dict, app_dict, switchStates = pickle.load(fi)
 except:
     print("Could not import prev data")
 
 
 def pickleData():
-    with open(filename, 'wb') as fi:
+    with open(saveDataFilename, 'wb') as fi:
         pickle.dump([key_dict, app_dict, switchStates], fi)
 
 ##################################
