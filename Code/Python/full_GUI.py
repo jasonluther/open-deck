@@ -1,4 +1,5 @@
 from imaplib import Commands
+from pynput.keyboard import Key, Controller
 from threading import *
 from tkinter import *
 from tkinter import filedialog
@@ -6,7 +7,6 @@ from tkinter import ttk
 from tkinter.colorchooser import askcolor
 import customtkinter
 import cv2
-import keyboard
 import logging
 import math
 import numpy as np
@@ -19,6 +19,8 @@ import time
 import tkinter
 
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+
+keyboard = Controller()
 
 saveDataFilename = 'data.pk'  # pickle file to save the data
 
@@ -87,7 +89,7 @@ app.title("Macro Keyboard Configure")
 def updatePorts():
     """
     Constantly refresh ports
-    Will change selection if current port no longer available as well as auto 
+    Will change selection if current port no longer available as well as auto
     detect if no current port is currently selected
     """
     global ser
@@ -221,6 +223,7 @@ def appCombobox_Callback(choice):
 def macro_record():
     """
     Handle Macro Setup "Record Keys" button
+    XXX This is broken right now due to the change from 'keyboard' to 'pynput'
     """
     logging.info("Recording Keys")  # change button colour while recording
     recButton.configure(state=tkinter.DISABLED)
@@ -327,6 +330,19 @@ def handleSerialCommandMenuNumber(number):
         bringWindowFront(number)
 
 
+modifier_keys = {
+    "cmd": Key.cmd,
+    "alt": Key.alt,
+    "ctrl": Key.ctrl,
+    "shift": Key.shift,
+    "esc": Key.esc,
+    "tab": Key.tab,
+    "windows": Key.cmd,
+    "right": Key.right,
+    "left": Key.left,
+}
+
+
 def handleSerialCommandNumber(number):
     """
     Handle number events, where the number represents the macro button
@@ -338,8 +354,19 @@ def handleSerialCommandNumber(number):
     # Run the macros
     logging.info(f"Running macro {number}: {key_dict[number][1]}")
     for command in key_dict[number][0]:
+        logging.info(f"Command: {command}")
+        keys = command.split("+")
+        for i in range(len(keys)):
+            if keys[i] in modifier_keys:
+                logging.debug(f"Replacing {keys[i]} with modifier")
+                keys[i] = modifier_keys[keys[i]]
         try:
-            keyboard.press_and_release(command)
+            for i in range(len(keys)):
+                logging.debug(f"Pressing {keys[i]}")
+                keyboard.press(keys[i])
+            for i in reversed(range(len(keys))):
+                logging.debug(f"Releasing {keys[i]}")
+                keyboard.release(keys[i])
             time.sleep(0.1)
         except IndexError as error:
             logging.warning(f"Unsupported key in command `{command}`: {error}")
@@ -578,7 +605,6 @@ if (connectSwitch.get() == "on"):
     detectPort(ports)
 
 
-
 # Image Upload
 frame_4 = customtkinter.CTkFrame(master=app)
 frame_4.pack(pady=(0, 20), padx=60, fill="both", expand=False)
@@ -706,7 +732,6 @@ butNumLabel = customtkinter.CTkLabel(
     master=frame_3, justify=tkinter.LEFT, text="Buttons 1, 2, 3")
 butNumLabel.grid(row=8, column=0, columnspan=1, padx=0, pady=0, sticky="nn")
 butNumLabel.configure(font=("Arial", 10))
-
 
 
 # Threading (actually running everything)

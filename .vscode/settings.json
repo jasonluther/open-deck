@@ -15,6 +15,7 @@
         "padx",
         "pady",
         "pygetwindow",
+        "pynput",
         "xlim"
     ]
 }
