@@ -750,6 +750,13 @@ def work():
 
 
 stop = False
-threading()
-app.mainloop()
-stop = True
+
+
+def main():
+    threading()
+    app.mainloop()
+    stop = True
+
+
+if __name__ == "__main__":
+    main()
