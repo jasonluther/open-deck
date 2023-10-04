@@ -1,0 +1,46 @@
+[build-system]
+requires = ['setuptools', 'setuptools-scm']
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opendeckmanager"
+version = "1.0.0"
+authors = [
+  { name="Josh R", email="author@example.com" },
+  { name="Jason Luther", email="jason@ixid.net" },
+]
+description = "GUI companion to Open Deck macro keyboard"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    'customtkinter==5.2.0',
+    'darkdetect==0.8.0',
+    'future==0.18.3',
+    'iso8601==2.1.0',
+    'numpy==1.26.0',
+    'opencv-python==4.8.1.78',
+    'opendeckmanager==1.0.0',
+    'pip==23.2.1',
+    'PyGetWindow==0.0.9',
+    'pynput==1.7.6',
+    'pyobjc-core==10.0',
+    'pyobjc-framework-ApplicationServices==10.0',
+    'pyobjc-framework-Cocoa==10.0',
+    'pyobjc-framework-Quartz==10.0',
+    'PyRect==0.2.0',
+    'pyserial==3.5',
+    'PyYAML==6.0.1',
+    'setuptools==68.1.2',
+    'six==1.16.0',
+]
+
+[project.urls]
+"Homepage" = "https://github.com/joshr120/open-deck"
+"Bug Tracker" = "https://github.com/joshr120/open-deck/issues"
+
+[project.scripts]
+odm = "opendeckmanager.__main__:main"
