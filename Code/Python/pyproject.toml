@@ -7,7 +7,7 @@ where = ["src"]
 
 [project]
 name = "opendeckmanager"
-version = "1.0.2"
+version = "1.0.3"
 authors = [
   { name="Josh R" },
   { name="Jason Luther", email="jason@ixid.net" },
@@ -49,3 +49,6 @@ dev = [
 [project.urls]
 "Homepage" = "https://github.com/joshr120/open-deck"
 "Bug Tracker" = "https://github.com/joshr120/open-deck/issues"
+
+[project.gui-scripts]
+opendeckmanager = "opendeckmanager.gui:main"
