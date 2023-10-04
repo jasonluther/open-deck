@@ -12,6 +12,7 @@
         "offvalue",
         "onvalue",
         "opendeck",
+        "opendeckmanager",
         "padx",
         "pady",
         "pygetwindow",
