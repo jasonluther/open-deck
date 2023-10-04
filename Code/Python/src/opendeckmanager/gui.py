@@ -1,4 +1,5 @@
 from imaplib import Commands
+from platformdirs import user_config_dir
 from pynput.keyboard import Key, Controller
 from threading import *
 from tkinter import *
@@ -10,6 +11,7 @@ import cv2
 import logging
 import math
 import numpy as np
+import os
 import pickle
 import pygetwindow as gw  # for window switching (windows only)
 import serial
@@ -18,11 +20,16 @@ import sys
 import time
 import tkinter
 
+app_name = "Open Deck Manager"
+app_author = "joshr120"
+
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 keyboard = Controller()
 
-saveDataFilename = 'data.pk'  # pickle file to save the data
+config_dir = user_config_dir(app_name, app_author)
+os.makedirs(config_dir, 0o0755, exist_ok=True)
+saveDataFilename = os.path.join(config_dir, 'data.pk')  # pickle file to save the data
 
 ser = serial.Serial()
 
@@ -83,7 +90,7 @@ app_dict = {
 
 app = customtkinter.CTk()
 app.geometry("800x900")
-app.title("Macro Keyboard Configure")
+app.title(app_name)
 
 
 def updatePorts():
