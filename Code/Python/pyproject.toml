@@ -37,13 +37,13 @@ dependencies = [
     "PyRect>=0.2.0",
     "pyserial>=3.5",
     "PyYAML>=6.0.1",
-    "setuptools>=68.1.2",
     "six>=1.16.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "build>=1.0.3"
+    "build>=1.0.3",
+    "pyinstaller>=6.0.0",
 ]
 
 [project.urls]
