@@ -20,10 +20,10 @@ These basic operations of Open Deck appear to work:
 * Image upload
 
 These operations are not implemented for macOS yet:
-* Macro key recording
-* "Menu Change Opens Computer App"/"Macro Button Opens Computer App"
+* Macro key recording: pynput Listener is crashing
+* "Menu Change Opens Computer App"/"Macro Button Opens Computer App": need to find a way to activate the window, probably using osascript
 
-The operation of the code on Windows has not been done. 
+Verification of the code on Windows has not been done. 
 
 ### Additional information
 
