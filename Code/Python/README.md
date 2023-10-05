@@ -27,5 +27,5 @@ Verification of the code on Windows has not been done.
 
 ### Additional information
 
-You must plug the Open Deck directly into the Mac, not a USB hub. You'll be prompted to allow the device to connect. After it has been authorized, it will work from a USB hub. (DOUBLE CHECK)
+You must plug the Open Deck directly into the Mac, not a USB hub. You'll be prompted to allow the device to connect. After it has been authorized, it will work from a USB hub.
 
