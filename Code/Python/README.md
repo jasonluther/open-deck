@@ -17,8 +17,6 @@ These basic operations of Open Deck appear to work:
 * Manual macro configuration
 * Application detection and automatic menu selection
 * Macro execution
-
-These operations are not tested yet:
 * Image upload
 
 These operations are not implemented for macOS yet:
