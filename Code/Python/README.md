@@ -25,6 +25,8 @@ These operations are not implemented for macOS yet:
 
 Verification of the code on Windows has not been done. 
 
+The app seems to use a lot of CPU (battery), so perhaps there are ways to improve that. 
+
 ### Additional information
 
 You must plug the Open Deck directly into the Mac, not a USB hub. You'll be prompted to allow the device to connect. After it has been authorized, it will work from a USB hub.
