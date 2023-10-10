@@ -29,7 +29,8 @@ keyboard = Controller()
 
 config_dir = user_config_dir(app_name, app_author)
 os.makedirs(config_dir, 0o0755, exist_ok=True)
-saveDataFilename = os.path.join(config_dir, 'data.pk')  # pickle file to save the data
+# pickle file to save the data
+saveDataFilename = os.path.join(config_dir, 'data.pk')
 
 ser = serial.Serial()
 
@@ -56,37 +57,78 @@ name_dict = {"Home 1": b'home_1\n', "Home 2": b'home_2\n', "Home 3": b'home_3\n'
              "Menu 7": b'menu_7\n', "Menu 8": b'menu_8\n', "Menu 9": b'menu_9\n', "Menu 10": b'menu_10\n', "Menu 11": b'menu_11\n', "Menu 12": b'menu_12\n', "Menu 13": b'menu_13\n', "Menu 14": b'menu_14\n', "Menu 15": b'menu_15\n', "Menu 16": b'menu_16\n', "Menu 17": b'menu_17\n', "Menu 18": b'menu_18\n'}
 
 
-# Defaults, New values are stored in data.pk
-key_dict = {
-    1: [['alt+left'], "Back"],
-    2: [['alt+right'], "Forwards"],
-    3: [['ctrl+r'], "Reload"],
-    4: [['previous track'], "Prev Track"],
-    5: [['next track'], "Next Track"],
-    6: [['play/pause media'], "pause"],
-    7: [['ctrl+s', 'ctrl+alt+n'], "Run"],
-    8: [['ctrl+alt+m'], "Stop"],
-    9: [['ctrl+s'], "Save"],
-    10: [['ctrl+shift+esc'], "Task Manager"],
-    11: [['alt+tab'], "alt tab"],
-    12: [['windows+shift+s'], "Snipping Tool"],
-    13: [['ctrl+r'], "Mid Rect"],
-    14: [['ctrl+a'], "Arc"],
-    15: [['ctrl+f'], "Chamfer"],
-    16: [['ctrl+r'], "Verify"],
-    17: [['ctrl+s', 'ctrl+u'], "Upload"],
-    18: [['ctrl+shift+m'], "Serial Monitor"],
-}
+# Open Deck's firmware and design provide the capability to have 6 collections of 3 keyboard macros.
+# Each collection represents one app.
+# Each macro represents one series of keys to be typed by the virtual keyboard.
+class OpenDeckConfig:
+    def __init__(self, apps_total=6, macros_per_app=3) -> None:
+        self._apps_total = apps_total
+        self._macros_per_app = macros_per_app
+        self._app_macros = []
+        for app_slot in range(0, self._apps_total):
+            self._app_macros.append({
+                "app_display_name": None,
+                "app_window_search_name": None,
+                "macros": []
+            })
+            for macro_slot in range(0, self._macros_per_app):
+                self._app_macros[app_slot]["macros"].append({
+                    "macro_display_name": None,
+                    "macro_key_list": None,
+                })
 
-# Defaults, New values are stored in data.pk
-app_dict = {
-    1: "Chrome",
-    2: "",
-    3: "visual studio code",
-    4: "",
-    5: "fusion",
-    6: "arduino"
-}
+    def fw_number_to_app_slot(self, firmware_number) -> int:
+        return math.ceil(firmware_number / 3) - 1
+
+    def fw_number_to_macro_slot(self, firmware_number) -> int:
+        return (firmware_number - 1) % 3
+
+    def fw_menu_to_app_slot(self, firmware_menu_number) -> int:
+        return firmware_menu_number - 1
+
+    def set_app(self, app_slot, app_display_name, app_window_search_name) -> None:
+        self._app_macros[app_slot]["app_display_name"] = app_display_name.strip()
+        self._app_macros[app_slot]["app_window_search_name"] = app_window_search_name.strip(
+        )
+        # Compatibility with existing pickle format
+        app_dict[app_slot+1] = app_window_search_name
+
+    def set_macro(self, app_slot, macro_slot, macro_display_name, macro_key_list) -> None:
+        self._app_macros[app_slot]["macros"][macro_slot]["macro_display_name"] = macro_display_name.strip()
+        self._app_macros[app_slot]["macros"][macro_slot]["macro_key_list"] = macro_key_list
+        # Compatibility with existing pickle format
+        key_dict[app_slot*self._macros_per_app + macro_slot +
+                 1] = [macro_key_list, macro_display_name]
+
+    def get_app_window_search_name(self, app_slot) -> str:
+        return self._app_macros[app_slot]["app_window_search_name"] or ""
+
+    def get_app_slot_for_window_name(self, window_name) -> int | None:
+        for app_slot in range(0, len(self._app_macros)):
+            if window_name.strip().lower() in self._app_macros[app_slot]["app_window_search_name"].lower():
+                return app_slot
+        return None
+
+    def get_macro_key_list(self, app_slot, macro_slot) -> []:
+        return self._app_macros[app_slot]["macros"][macro_slot]["macro_key_list"]
+
+    def get_macro_display_name(self, app_slot, macro_slot) -> str:
+        return self._app_macros[app_slot]["macros"][macro_slot]["macro_display_name"]
+
+    def __repr__(self):
+        result = "OpenDeckConfig:\n"
+        for app_slot in range(0, self._apps_total):
+            menu = app_slot + 1
+            result += f"    {app_slot} (menu {menu}): {self._app_macros[app_slot]['app_window_search_name']}\n"
+            for macro_slot in range(0, self._macros_per_app):
+                button = (app_slot) * self._macros_per_app + macro_slot + 1
+                result += f"        {macro_slot} (button {button}): "
+                macro = self._app_macros[app_slot]['macros'][macro_slot]
+                result += f"{macro['macro_display_name']}: {macro['macro_key_list']}\n"
+        return result
+
+
+CONFIG = OpenDeckConfig()
 
 app = customtkinter.CTk()
 app.geometry("800x900")
@@ -142,11 +184,56 @@ def detectPort(ports):
 ##################################
 #       get data from pickle
 ##################################
+
+# Defaults, New values are stored in data.pk
+key_dict = {
+    1: [['alt+left'], "Back"],
+    2: [['alt+right'], "Forwards"],
+    3: [['ctrl+r'], "Reload"],
+    4: [['previous track'], "Prev Track"],
+    5: [['next track'], "Next Track"],
+    6: [['play/pause media'], "pause"],
+    7: [['ctrl+s', 'ctrl+alt+n'], "Run"],
+    8: [['ctrl+alt+m'], "Stop"],
+    9: [['ctrl+s'], "Save"],
+    10: [['ctrl+shift+esc'], "Task Manager"],
+    11: [['alt+tab'], "alt tab"],
+    12: [['windows+shift+s'], "Snipping Tool"],
+    13: [['ctrl+r'], "Mid Rect"],
+    14: [['ctrl+a'], "Arc"],
+    15: [['ctrl+f'], "Chamfer"],
+    16: [['ctrl+r'], "Verify"],
+    17: [['ctrl+s', 'ctrl+u'], "Upload"],
+    18: [['ctrl+shift+m'], "Serial Monitor"],
+}
+
+# Defaults, New values are stored in data.pk
+app_dict = {
+    1: "Chrome",
+    2: "",
+    3: "visual studio code",
+    4: "",
+    5: "fusion",
+    6: "arduino"
+}
+
 try:
     with open(saveDataFilename, 'rb') as fi:
         key_dict, app_dict, switchStates = pickle.load(fi)
-except:
-    logging.warning("Could not import saved data from pickle file")
+except Exception as e:
+    logging.warning("Could not import saved data from pickle file:", e)
+
+# Load CONFIG from the app_dict and key_dict
+for app_index in app_dict.keys():
+    app_slot = CONFIG.fw_menu_to_app_slot(app_index)
+    CONFIG.set_app(app_slot, app_dict[app_index], app_dict[app_index])
+for key_index in key_dict.keys():
+    (macro_key_list, macro_display_name) = key_dict[key_index]
+    app_slot = CONFIG.fw_number_to_app_slot(key_index)
+    macro_slot = CONFIG.fw_number_to_macro_slot(key_index)
+    CONFIG.set_macro(app_slot, macro_slot,
+                     macro_display_name, macro_key_list)
+logging.debug(CONFIG)
 
 
 def pickleData():
@@ -164,7 +251,9 @@ def macro_update():
     Handle Macro Setup "Update" button
     """
     buttonNum = int(macroCombobox.get()[5:])
-    key_dict[buttonNum][1] = nameEntry.get()
+    app_slot = CONFIG.fw_number_to_app_slot(buttonNum)
+    macro_slot = CONFIG.fw_number_to_macro_slot(buttonNum)
+    nickname = nameEntry.get()
     entry = macroEntry.get()
     commands = entry.split(",")
     finalCommands = []
@@ -173,7 +262,7 @@ def macro_update():
         # command.replace(" ", "") #remove any white spaces (actually still need this for next track)
         if (command != ""):
             finalCommands.append(command)
-    key_dict[buttonNum][0] = finalCommands
+    CONFIG.set_macro(app_slot, macro_slot, nickname, finalCommands)
     logging.debug(f"Button click: {macroCombobox.get()}")
     pickleData()
 
@@ -183,7 +272,7 @@ def app_update():
     Handle Application Setup "App Name" update
     """
     appNum = int(appCombobox.get()[4:])
-    app_dict[appNum] = appEntry.get()  # update app name in dict
+    CONFIG.set_app(appNum-1, appEntry.get(), appEntry.get())
     logging.debug(f"Button click: {appCombobox.get()}")
     pickleData()
 
@@ -196,19 +285,22 @@ def macroCombobox_callback(choice):
     num = int(choice[5:])
     logging.debug(f"combobox dropdown num: {num}")
     macroEntry.delete(0, 'end')
-    if (len(key_dict[num][0]) > 1):
+    app_slot = CONFIG.fw_number_to_app_slot(num)
+    macro_slot = CONFIG.fw_number_to_macro_slot(num)
+    macro_key_list = CONFIG.get_macro_key_list(app_slot, macro_slot)
+    if (len(macro_key_list) > 1):
         count = 0
-        for item in key_dict[num][0]:
+        for item in macro_key_list:
             count += 1
             item.replace("{", "")  # remove any weird brackets added?
             item.replace("}", "")  # remove any weird brackets added?
             macroEntry.insert('end', item)
-            if (count < len(key_dict[num][0])):
+            if (count < len(macro_key_list)):
                 macroEntry.insert('end', ', ')
     else:
-        macroEntry.insert(0, key_dict[num][0])
+        macroEntry.insert(0, macro_key_list)
     nameEntry.delete(0, 'end')
-    nameEntry.insert(0, key_dict[num][1])
+    nameEntry.insert(0, CONFIG.get_macro_display_name(app_slot, macro_slot))
     appCombobox.set("App "+str(math.ceil(num/3)))
 
 # app dropdown changed
@@ -224,7 +316,7 @@ def appCombobox_Callback(choice):
     butNumLabel.configure(
         text=("Buttons " + str(num*3-2) + ", " + str(num*3-1) + ", " + str(num*3)))
     appEntry.delete(0, 'end')
-    appEntry.insert(0, app_dict[num])
+    appEntry.insert(0, CONFIG.get_app_window_search_name(num - 1))
 
 
 def macro_record():
@@ -350,17 +442,21 @@ modifier_keys = {
 }
 
 
-def handleSerialCommandNumber(number):
+def handleSerialCommandNumber(fwNumber):
     """
     Handle number events, where the number represents the macro button
     """
     # Set window to app button was for
-    appNum = math.ceil(number/3)
-    if (app_dict[appNum] != "" and switch_2.get() == "on"):
-        bringWindowFront(appNum)
+    fwAppNum = math.ceil(fwNumber/3)
+    app_slot = CONFIG.fw_number_to_app_slot(fwNumber)
+    macro_slot = CONFIG.fw_number_to_macro_slot(fwNumber)
+    if (CONFIG.get_app_window_search_name(app_slot) != "" and switch_2.get() == "on"):
+        bringWindowFront(fwAppNum)
     # Run the macros
-    logging.info(f"Running macro {number}: {key_dict[number][1]}")
-    for command in key_dict[number][0]:
+    macro_key_list = CONFIG.get_macro_key_list(app_slot, macro_slot)
+    macro_display_name = CONFIG.get_macro_display_name(app_slot, macro_slot)
+    logging.info(f"Running macro {fwNumber}: {macro_display_name}")
+    for command in macro_key_list:
         logging.info(f"Command: {command}")
         keys = command.split("+")
         for i in range(len(keys)):
@@ -384,7 +480,7 @@ def handleSerialCommandNumber(number):
             logging.error(f"Failed to run command `{command}`: {error}")
 
 
-def bringWindowFront(num):
+def bringWindowFront(fwAppNum):
     """
     Make chosen app/window active, where num represents the app number
     """
@@ -392,7 +488,9 @@ def bringWindowFront(num):
         # could be an issue if multiple instances are open and it uses
         # background one instead of active one (could scan all to see if one
         # is already open)
-        title = app_dict[num]
+
+        app_slot = CONFIG.fw_menu_to_app_slot(fwAppNum)
+        title = CONFIG.get_app_window_search_name(app_slot)
         if (title != ""):
             try:
                 if (len(gw.getWindowsWithTitle(title)) > 0):  # check if application is open
@@ -422,17 +520,14 @@ def sendWindow():
     if (activeWindow != lastWindow):  # if window changed
         logging.info(f"window changed to {activeWindow}")
         lastWindow = activeWindow
-        for item in app_dict:
-            appName = app_dict[item]
-            if (appName != ""):  # loop through all app names
-                if appName.lower() in lastWindow.lower():  # if name of app in current window send menu num
-                    # return menu number it was found on
-                    logging.info(
-                        f"Sending serial command: `GoTo: {str(item)}`")
-                    if (ser.isOpen()):
-                        ser.write(("GoTo: " + str(item)).encode("utf-8"))
-                        time.sleep(0.2)
-                    break
+        app_slot = CONFIG.get_app_slot_for_window_name(lastWindow)
+        if app_slot != None:
+            item = app_slot + 1
+            logging.info(
+                f"Sending serial command: `GoTo: {str(item)}`")
+            if (ser.isOpen()):
+                ser.write(("GoTo: " + str(item)).encode("utf-8"))
+                time.sleep(0.2)
 
 
 def imgPicker():
@@ -661,11 +756,12 @@ topLabel.grid(row=4, column=1, columnspan=1, padx=10, pady=0, sticky="ew")
 macroEntry = customtkinter.CTkEntry(master=frame_2)
 macroEntry.grid(row=5, column=1, columnspan=1,
                 padx=10, pady=(0, 0), sticky="ew")
-if (len(key_dict[1][0]) > 1):
-    for item in key_dict[1][0]:
+macro_key_list = CONFIG.get_macro_key_list(0, 0)
+if (len(macro_key_list) > 1):
+    for item in macro_key_list:
         macroEntry.insert(0, (item+','))
 else:
-    macroEntry.insert(0, key_dict[1][0])
+    macroEntry.insert(0, macro_key_list)
 recButton = customtkinter.CTkButton(
     master=frame_2, command=macro_record, text="Record Keys (5 Sec)")
 recButton.grid(row=6, column=1, columnspan=1,
@@ -677,7 +773,8 @@ topLabel.grid(row=4, column=2, columnspan=1, padx=10, pady=0, sticky="ew")
 nameEntry = customtkinter.CTkEntry(master=frame_2)
 nameEntry.grid(row=5, column=2, columnspan=1,
                padx=10, pady=(0, 0), sticky="ew")
-nameEntry.insert(0, key_dict[1][1])
+macro_display_name = CONFIG.get_macro_display_name(0, 0)
+nameEntry.insert(0, macro_display_name)
 
 button_1 = customtkinter.CTkButton(
     master=frame_2, command=macro_update, text="Update")
@@ -710,7 +807,7 @@ topLabel = customtkinter.CTkLabel(
 topLabel.grid(row=6, column=1, columnspan=1, padx=20, pady=0, sticky="ew")
 appEntry = customtkinter.CTkEntry(master=frame_3)
 appEntry.grid(row=7, column=1, columnspan=1, padx=20, pady=(0, 0), sticky="ew")
-appEntry.insert(0, app_dict[1])
+appEntry.insert(0, CONFIG.get_app_window_search_name(0))
 
 appUpdate = customtkinter.CTkButton(
     master=frame_3, command=app_update, text="Update")
