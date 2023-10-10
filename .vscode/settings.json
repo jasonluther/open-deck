@@ -9,6 +9,7 @@
         "hwid",
         "imread",
         "imshow",
+        "joshr",
         "offvalue",
         "onvalue",
         "opendeck",
@@ -16,6 +17,7 @@
         "osascript",
         "padx",
         "pady",
+        "platformdirs",
         "pygetwindow",
         "pynput",
         "xlim"
