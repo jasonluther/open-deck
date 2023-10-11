@@ -19,7 +19,7 @@ import sys
 import time
 import tkinter
 
-from config import OpenDeckConfig
+from config import OpenDeckConfig, AppOption, AppOptionValue
 
 app_name = "Open Deck Manager"
 app_author = "joshr120"
@@ -37,9 +37,6 @@ ser = serial.Serial()
 COMports = []
 
 prevPort = "Select"
-
-# Defaults, New values are stored in data.pk
-switchStates = ["off", "on", "on", "on"]
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("blue")
@@ -61,6 +58,16 @@ config_dir = user_config_dir(app_name, app_author)
 os.makedirs(config_dir, 0o0755, exist_ok=True)
 config_save_file = os.path.join(config_dir, 'open-deck-manager-config.pk')
 CONFIG = OpenDeckConfig(save_file=config_save_file)
+
+app_option_defaults = {
+    AppOption.OPEN_APP_ON_MENU_CHANGE: AppOptionValue.OFF,
+    AppOption.OPEN_APP_ON_MACRO_USE: AppOptionValue.ON,
+    AppOption.SEND_ACTIVE_APP_TO_DECK: AppOptionValue.ON,
+    AppOption.AUTO_DETECT_SERIAL_PORT: AppOptionValue.ON,
+}
+for option in app_option_defaults:
+    if CONFIG.get_app_option(option) is None:
+        CONFIG.set_app_option(option, app_option_defaults[option])
 
 app = customtkinter.CTk()
 app.geometry("800x900")
@@ -90,10 +97,10 @@ def updatePorts():
         if (portSelect.get() not in COMports):  # issue here???????
             logging.debug("Old port no longer detected, un-selecting")
             portSelect.set("Select")
-        if (portSelect.get() == "Select" and connectSwitch.get() == "on"):
+        if (portSelect.get() == "Select" and CONFIG.get_app_option(AppOption.AUTO_DETECT_SERIAL_PORT) == AppOptionValue.ON):
             detectPort(ports)
 
-    if (ser.isOpen() == False or prevPort != portSelect.get()):  # OR USER CHANGED BAUD RATE
+    if (ser.isOpen() == False or prevPort != portSelect.get()) and portSelect.get() != "Select":  # OR USER CHANGED BAUD RATE
         ser.close()  # close current port before trying new one
         prevPort = portSelect.get()
         try:
@@ -210,16 +217,19 @@ def macro_record():
 
 
 def connectSwitchChange():
-    if (connectSwitch.get() == "on"):
+    CONFIG.set_app_option(AppOption.AUTO_DETECT_SERIAL_PORT,
+                          AppOptionValue(connectSwitch.get()))
+    if (CONFIG.get_app_option(AppOption.AUTO_DETECT_SERIAL_PORT) == AppOptionValue.ON):
         updatePorts()
-    switchChange()
 
 
 def switchChange():
-    switchStates[0] = switch_1.get()
-    switchStates[1] = switch_2.get()
-    switchStates[2] = switch_3.get()
-    switchStates[3] = connectSwitch.get()
+    CONFIG.set_app_option(AppOption.OPEN_APP_ON_MENU_CHANGE,
+                          AppOptionValue(switch_1.get()))
+    CONFIG.set_app_option(AppOption.OPEN_APP_ON_MACRO_USE,
+                          AppOptionValue(switch_2.get()))
+    CONFIG.set_app_option(AppOption.SEND_ACTIVE_APP_TO_DECK,
+                          AppOptionValue(switch_3.get()))
 
 
 def upload_button_callback():
@@ -246,7 +256,7 @@ def runMacros():
     # Connect to serial port #  (add gui and auto detect)
     if (ser.isOpen()):
         # send current app over serial
-        if (switch_3.get() == "on"):
+        if (CONFIG.get_app_option(AppOption.SEND_ACTIVE_APP_TO_DECK) == AppOptionValue.ON):
             try:
                 sendWindow()  # function to send active window num to opendeck
             except:
@@ -276,7 +286,7 @@ def runMacros():
                         f"Couldn't decode number {number}: {error}")
                 handleSerialCommandNumber(number)
         except Exception as error:  # error reading from buffer so close serial to try and re-connect
-            logging.error("Error reading line: {error}")
+            logging.error(f"Error reading line: {error}")
             ser.close()
 
 
@@ -284,7 +294,7 @@ def handleSerialCommandMenuNumber(number):
     """
     Handle "Menu: X" events, where X is the app number
     """
-    if (switch_1.get() == "on"):
+    if (CONFIG.get_app_option(AppOption.OPEN_APP_ON_MENU_CHANGE) == AppOptionValue.ON):
         bringWindowFront(number)
 
 
@@ -309,34 +319,38 @@ def handleSerialCommandNumber(fwNumber):
     fwAppNum = math.ceil(fwNumber/3)
     app_slot = CONFIG.fw_number_to_app_slot(fwNumber)
     macro_slot = CONFIG.fw_number_to_macro_slot(fwNumber)
-    if (CONFIG.get_app_window_search_name(app_slot) != "" and switch_2.get() == "on"):
+    if (CONFIG.get_app_window_search_name(app_slot) != "" and CONFIG.get_app_option(AppOption.OPEN_APP_ON_MACRO_USE) == AppOptionValue.ON):
         bringWindowFront(fwAppNum)
     # Run the macros
     macro_key_list = CONFIG.get_macro_key_list(app_slot, macro_slot)
     macro_display_name = CONFIG.get_macro_display_name(app_slot, macro_slot)
-    logging.info(f"Running macro {fwNumber}: {macro_display_name}")
-    for command in macro_key_list:
-        logging.info(f"Command: {command}")
-        keys = command.split("+")
-        for i in range(len(keys)):
-            if keys[i] in modifier_keys:
-                logging.debug(f"Replacing {keys[i]} with modifier")
-                keys[i] = modifier_keys[keys[i]]
-        try:
+    if macro_key_list is None:
+        logging.info(f"Macro {fwNumber} is not configured")
+        return
+    else:
+        logging.info(f"Running macro {fwNumber}: {macro_display_name}")
+        for command in macro_key_list:
+            logging.info(f"Command: {command}")
+            keys = command.split("+")
             for i in range(len(keys)):
-                logging.debug(f"Pressing {keys[i]}")
-                keyboard.press(keys[i])
-            for i in reversed(range(len(keys))):
-                logging.debug(f"Releasing {keys[i]}")
-                keyboard.release(keys[i])
-            time.sleep(0.1)
-        except IndexError as error:
-            logging.warning(f"Unsupported key in command `{command}`: {error}")
-        except ValueError as error:
-            logging.warning(
-                f"Unrecognized hotkey in command `{command}`: {error}")
-        except Exception as error:
-            logging.error(f"Failed to run command `{command}`: {error}")
+                if keys[i] in modifier_keys:
+                    logging.debug(f"Replacing {keys[i]} with modifier")
+                    keys[i] = modifier_keys[keys[i]]
+            try:
+                for i in range(len(keys)):
+                    logging.debug(f"Pressing {keys[i]}")
+                    keyboard.press(keys[i])
+                for i in reversed(range(len(keys))):
+                    logging.debug(f"Releasing {keys[i]}")
+                    keyboard.release(keys[i])
+                time.sleep(0.1)
+            except IndexError as error:
+                logging.warning(f"Unsupported key in command `{command}`: {error}")
+            except ValueError as error:
+                logging.warning(
+                    f"Unrecognized hotkey in command `{command}`: {error}")
+            except Exception as error:
+                logging.error(f"Failed to run command `{command}`: {error}")
 
 
 def bringWindowFront(fwAppNum):
@@ -549,9 +563,10 @@ baudSelect = customtkinter.CTkComboBox(frame_1, values=["9600", "115200"])
 baudSelect.grid(row=2, column=1, columnspan=1, padx=0, pady=10, sticky="w")
 baudSelect.set("115200")
 
-connectSwitchState = customtkinter.StringVar(value=switchStates[3])
+connectSwitchState = customtkinter.StringVar(
+    value=CONFIG.get_app_option(AppOption.AUTO_DETECT_SERIAL_PORT))
 connectSwitch = customtkinter.CTkSwitch(master=frame_1, text="Auto Detect Port",
-                                        command=connectSwitchChange, variable=connectSwitchState, onvalue="on", offvalue="off")
+                                        command=connectSwitchChange, variable=connectSwitchState, onvalue=AppOptionValue.ON, offvalue=AppOptionValue.OFF)
 connectSwitch.grid(row=3, column=0, columnspan=2,
                    padx=20, pady=(0, 10), sticky="nn")
 
@@ -562,7 +577,7 @@ connectLabel.grid(row=4, column=0, columnspan=2,
 connectLabel.configure(font=("Arial", 16))
 
 # auto detect port (make function in future)
-if (connectSwitch.get() == "on"):
+if (CONFIG.get_app_option(AppOption.AUTO_DETECT_SERIAL_PORT) == AppOptionValue.ON):
     detectPort(ports)
 
 
@@ -671,20 +686,23 @@ appUpdate.grid(row=7, column=2, columnspan=1,
                padx=20, pady=(0, 0), sticky="ew")
 
 # switches
-sw1State = customtkinter.StringVar(value=switchStates[0])
+sw1State = customtkinter.StringVar(
+    value=CONFIG.get_app_option(AppOption.OPEN_APP_ON_MENU_CHANGE))
 switch_1 = customtkinter.CTkSwitch(master=frame_3, text="Menu Change Opens Computer App",
-                                   command=switchChange, variable=sw1State, onvalue="on", offvalue="off")
+                                   command=switchChange, variable=sw1State, onvalue=AppOptionValue.ON, offvalue=AppOptionValue.OFF)
 switch_1.grid(row=8, column=0, columnspan=3,
               padx=20, pady=(20, 10), sticky="nn")
 
-sw2State = customtkinter.StringVar(value=switchStates[1])
+sw2State = customtkinter.StringVar(
+    value=CONFIG.get_app_option(AppOption.OPEN_APP_ON_MACRO_USE))
 switch_2 = customtkinter.CTkSwitch(master=frame_3, text="Macro Button Opens Computer App",
-                                   command=switchChange, variable=sw2State, onvalue="on", offvalue="off")
+                                   command=switchChange, variable=sw2State, onvalue=AppOptionValue.ON, offvalue=AppOptionValue.OFF)
 switch_2.grid(row=9, column=1, columnspan=1, padx=20, pady=10, sticky="nn")
 
-sw3State = customtkinter.StringVar(value=switchStates[2])
+sw3State = customtkinter.StringVar(
+    value=CONFIG.get_app_option(AppOption.SEND_ACTIVE_APP_TO_DECK))
 switch_3 = customtkinter.CTkSwitch(master=frame_3, text="Deck Shows Current Active App",
-                                   command=switchChange, variable=sw3State, onvalue="on", offvalue="off")
+                                   command=switchChange, variable=sw3State, onvalue=AppOptionValue.ON, offvalue=AppOptionValue.OFF)
 switch_3.grid(row=10, column=1, columnspan=1, padx=20, pady=10, sticky="nn")
 
 # label for buttons numbers
