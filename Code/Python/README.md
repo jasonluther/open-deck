@@ -19,13 +19,19 @@ These basic operations of Open Deck appear to work:
 * Macro execution
 * Image upload
 
+Work in progress:
+* Moving configuration and persistence to a new module. 
+  * Need to add back a default list of macros. 
+  * Need to add the rest of the app settings, not must macros
+
 These operations are not implemented for macOS yet:
 * Macro key recording: pynput Listener is crashing
 * "Menu Change Opens Computer App"/"Macro Button Opens Computer App": need to find a way to activate the window, probably using osascript
 
-Verification of the code on Windows has not been done. 
-
-The app seems to use a lot of CPU (battery), so perhaps there are ways to improve that. 
+This work needs to be done:
+* Verify the code on Windows 
+* Profile to see if any optimization is necessary 
+* Replace pickle with a more secure serialization mechanism
 
 ### Additional information
 
