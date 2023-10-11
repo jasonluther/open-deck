@@ -28,10 +28,6 @@ logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 keyboard = Controller()
 
-config_dir = user_config_dir(app_name, app_author)
-os.makedirs(config_dir, 0o0755, exist_ok=True)
-saveDataFilename = os.path.join(config_dir, 'data.pk')
-
 ser = serial.Serial()
 
 COMports = []
@@ -345,7 +341,8 @@ def handleSerialCommandNumber(fwNumber):
                     keyboard.release(keys[i])
                 time.sleep(0.1)
             except IndexError as error:
-                logging.warning(f"Unsupported key in command `{command}`: {error}")
+                logging.warning(
+                    f"Unsupported key in command `{command}`: {error}")
             except ValueError as error:
                 logging.warning(
                     f"Unrecognized hotkey in command `{command}`: {error}")
