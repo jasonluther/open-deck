@@ -20,6 +20,7 @@ import time
 import tkinter
 
 from config import OpenDeckConfig, AppOption, AppOptionValue
+from key_recorder import KeyRecorder
 
 app_name = "Open Deck Manager"
 app_author = "joshr120"
@@ -27,6 +28,7 @@ app_author = "joshr120"
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 keyboard = Controller()
+key_recorder = KeyRecorder(logging)
 
 ser = serial.Serial()
 
@@ -185,31 +187,20 @@ def appCombobox_Callback(choice):
 def macro_record():
     """
     Handle Macro Setup "Record Keys" button
-    XXX This is broken right now due to the change from 'keyboard' to 'pynput'
     """
-    logging.info("Recording Keys")  # change button colour while recording
+    logging.info("Recording Keys")
     recButton.configure(state=tkinter.DISABLED)
-    keyboard.start_recording()
-    time.sleep(5)
-    events = keyboard.stop_recording()
-    count = 0  # add 1 for every down if down = up then add comma
-    combo = ""
-    lastEvent = None
-    for event in events:
-        if (event != lastEvent):
-            if (event.event_type == "down"):
-                combo += event.name + "+"
-            elif (event.event_type == "up"):
-                combo = combo[:len(combo)-1]  # remove + for, if end of a combo
-                combo += ","
-        lastEvent = event
-    # combo.strip()
-    # remove last comma and space (not sure how it removes all?)
-    combo = combo[:len(combo)-1]
-    logging.debug(f"{combo}")
-    recButton.configure(state=tkinter.NORMAL)
-    macroEntry.delete(0, 'end')
-    macroEntry.insert(0, combo)
+
+    def handle_recording(keys):
+        logging.info(f"Recorded keys: {keys}")
+        # XXX convert to actual text after proving this approach works
+        macro = f"{keys}"
+        logging.debug(f"{macro}")
+        recButton.configure(state=tkinter.NORMAL)
+        macroEntry.delete(0, 'end')
+        macroEntry.insert(0, 'macro')
+
+    key_recorder.record(5, handle_recording)
 
 
 def connectSwitchChange():
